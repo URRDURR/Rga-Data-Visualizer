@@ -102,7 +102,8 @@ def fft_noise_removal(noisy_signal):
     ffilt = np.fft.ifft(fhat)
     return ffilt
 
-#def plot_figure():
+
+# def plot_figure():
 
 
 # value = fft_noise_removal(y)
@@ -116,10 +117,10 @@ import_to_array()
 x = amu_layer_vector
 y = rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX]
 
-w = sps.savgol_filter(y, 7, 3)
-plt.figure()
-plt.plot(x, w)
-plt.title("4")
+# w = sps.savgol_filter(y, 7, 3)
+# plt.figure()
+# plt.plot(x, w)
+# plt.title("4")
 
 z, _ = sps.find_peaks(
     rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX],
@@ -160,12 +161,26 @@ plt.ylabel("intensity (Torr)")  # Add a y-label to the Axes.
 plt.title("Test Plot")  # Add a title to the Axes.
 plt.grid()
 
-for i,txt in enumerate(x):
-    plt.text((x[z])[i], (x[z])[i], txt)
-# plt.tick_params(direction="out")
+print("enter")
+plt.text((x[z])[7], (y[z])[7], (x[z])[7])
+print(len(x[z]))
 
 for i in range(len(x[z])):
-    print((x[z])[i], (y[z])[i])
+    print("Test")
+    plt.text(
+        (x[z])[i],
+        (y[z])[i],
+        round(((x[z])[i]), 1),
+        rotation=75,
+        rotation_mode="default",
+        verticalalignment="bottom",
+        horizontalalignment="left",
+    )
+    print(((x[z])[i], (y[z])[i], (x[z])[i]))
+# plt.tick_params(direction="out")
+print("exit")
+# for i in range(len(x[z])):
+#     print((x[z])[i], (y[z])[i])
 
 # plt.figure()
 # plt.plot(x, y)
