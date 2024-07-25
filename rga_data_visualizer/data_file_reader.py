@@ -223,5 +223,3 @@ def read_file_data(path):
         print('GPIO input signals =', gpio_in_signals)
  
         return(time_stamps,spectra,total_pressures,json_file,number_of_cycles)
-
-global scan_signals
