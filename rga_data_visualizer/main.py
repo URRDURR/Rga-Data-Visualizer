@@ -5,36 +5,27 @@ import pandas as pan
 import matplotlib.pyplot as plt
 import scipy.signal as sps
 
-import scienceplots
+# import scienceplots
 import data_file_reader
 
-import plotly.express as px
+# import plotly.express as px
 
 # (plt.style.use("science"))
 
 # np.set_printoptions(threshold=1000000000000, linewidth=1000000000000)
 
 
-folder_path = r"D:\-SFU Physics Lab Work\HIM Room\Guneet\2024-07-11\RGA\Scan 3 - Increased Points - 2024_07_11\Analog-20240711-123603-709.rgadata"
+folder_path = r"E:\-SFU Physics Lab Work\HIM Room\Guneet\2024-07-11\RGA\Scan 3 - Increased Points - 2024_07_11\Analog-20240711-123603-709.rgadata"
 
-time_stamps, spectra, total_pressures, json_file, number_of_cycles = data_file_reader.read_file_data(folder_path)
+time_stamps, spectra, total_pressures, json_file, number_of_cycles = (
+    data_file_reader.read_file_data(folder_path)
+)
 
 json_split = json_file.replace(",", "").split("\n")
-print(json_file)
 points_per_amu = int((json_split[30])[28:])
 scan_rate = float((json_split[31])[24:])
 start_mass = int((json_split[32])[25:])
 stop_mass = int((json_split[33])[24:])
-
-print(start_mass)
-print(stop_mass)
-print(np.arange(0, 66, 5))
-print(start_mass + 4 + stop_mass)
-
-# print("points_per_amu", points_per_amu)
-# print("scan_rate", scan_rate)
-# print("stop_mass", stop_mass)
-# print("start_mass", start_mass)
 
 
 def import_to_array():
@@ -58,7 +49,9 @@ def import_to_array():
     number_of_amu_points = ((stop_mass - start_mass) * points_per_amu) + 1
 
     # array initialized for the right amount of space
-    rga_scan_data_array = np.ones((number_of_amu_points, number_of_cycles, LAYER_DIMENSIONS))
+    rga_scan_data_array = np.ones(
+        (number_of_amu_points, number_of_cycles, LAYER_DIMENSIONS)
+    )
 
     # its maybe more convinent to have the AMU position bundled in with the main array, may change if any preformance/ease of use issues occour
     amu_layer_vector = np.linspace(start_mass, stop_mass, number_of_amu_points)
@@ -96,64 +89,44 @@ def pressure_delta_calc(timings, rate, max):
     print("\n")
 
 
-print(time_stamps)
-my_new_list = [i * 0.001 for i in time_stamps]
-pressure_delta_calc(my_new_list, scan_rate, stop_mass)
-
-print(my_new_list)
-
-import_to_array()
-
-
-x = amu_layer_vector
-y = rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX]
-
-# noise_removal = sps.savgol_filter((rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX]),window_length= 6, polyorder=1)
-# print(noise_removal)
-
-
 def fft_noise_removal(noisy_signal):
-    threshold = 0.0001 
-    fhat = np.fft.fft(
-        rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX],
-        len(rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX]),
-    )
-    PSD = fhat * np.conj(fhat) / len(rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX])
+    threshold = 0.0001
+    fhat = np.fft.fft(noisy_signal, len(noisy_signal))
+    PSD = fhat * np.conj(fhat) / len(noisy_signal)
 
-    plt.figure()
-    plt.plot(x, fhat)
-    plt.title("1")
-
-    plt.figure()
-    plt.plot(x, PSD)
-    plt.title("2")
-
-    indices = PSD < (0.09*(10**(-10)))
+    indices = PSD < (0.09 * (10 ** (-10)))
     print(indices)
     PSDclean = PSD * indices
     fhat = indices * fhat
 
-    plt.figure()
-    plt.plot(x, fhat)
-    plt.title("3")
-
     ffilt = np.fft.ifft(fhat)
-    print("tesgggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggget",ffilt)
     return ffilt
 
-#value = fft_noise_removal(y)
+#def plot_figure():
+
+
+# value = fft_noise_removal(y)
 
 # plt.figure()
 # plt.plot(x, value)
 # plt.title("4")
-print(len(y))
+
+import_to_array()
+
+x = amu_layer_vector
+y = rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX]
 
 w = sps.savgol_filter(y, 7, 3)
 plt.figure()
 plt.plot(x, w)
 plt.title("4")
 
-z, _ = sps.find_peaks(rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX], prominence = 1 * (10 ** (-8)), distance = 7, height = 1 * (10 ** (-8)))#, height=6* (10 ** (-8)))
+z, _ = sps.find_peaks(
+    rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX],
+    prominence=1 * (10 ** (-8)),
+    distance=7,
+    height=1 * (10 ** (-8)),
+)  # , height=6* (10 ** (-8)))
 
 np.array(z)
 # 0.0001
@@ -180,14 +153,16 @@ plt.xlabel("Mass (Amu)")  # Add an x-label to the Axes.
 plt.xticks(np.arange(start_mass - 1, stop_mass + 1, 5))
 plt.xticks(np.arange(start_mass - 1, stop_mass + 1, 1), minor=True)
 
-#plt.yticks(np.arange(0, max(t), 1), minor=True)
+# plt.yticks(np.arange(0, max(t), 1), minor=True)
 
 # ax.set_xticks(np.arange(start_mass,stop_mass,6),minor=True)
 plt.ylabel("intensity (Torr)")  # Add a y-label to the Axes.
 plt.title("Test Plot")  # Add a title to the Axes.
 plt.grid()
 
-#plt.tick_params(direction="out")
+for i,txt in enumerate(x):
+    plt.text((x[z])[i], (x[z])[i], txt)
+# plt.tick_params(direction="out")
 
 for i in range(len(x[z])):
     print((x[z])[i], (y[z])[i])
@@ -205,11 +180,27 @@ x = np.linspace(1, 10, 10)
 y = [7, 215, 423, 630, 838, 1046, 1254, 1461, 1669, 1877]
 
 
-hi = [2, 17, 32, 46, 61, 76, 91, 106, 120, 135, 150, 165, 179, 194, 209, 224, 239, 253, 268, 283]
-
-
-# plt.figure(2)
-# plt.plot(x, y)
-
+hi = [
+    2,
+    17,
+    32,
+    46,
+    61,
+    76,
+    91,
+    106,
+    120,
+    135,
+    150,
+    165,
+    179,
+    194,
+    209,
+    224,
+    239,
+    253,
+    268,
+    283,
+]
 
 plt.show()
