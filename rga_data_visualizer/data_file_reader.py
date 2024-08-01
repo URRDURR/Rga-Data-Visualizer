@@ -60,7 +60,7 @@ SKIP_STEP2_DATA = False
 
 def read_file_data(path):
 
-    with HiddenPrints(): # don't have to manualy disable prints now, can just get needed variables
+    # with HiddenPrints(): # don't have to manualy disable prints now, can just get needed variables
 
         with open(path, "rb") as f:
             # File description - 32-byte string

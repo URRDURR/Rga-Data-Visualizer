@@ -122,32 +122,39 @@ y = rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX]
 # plt.plot(x, w)
 # plt.title("4")
 
-z, _ = sps.find_peaks(
+peaks_index, _ = sps.find_peaks(
     rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX],
     prominence=1 * (10 ** (-8)),
     distance=7,
     height=1 * (10 ** (-8)),
 )  # , height=6* (10 ** (-8)))
 
-np.array(z)
+peaks_index_thresholded, _ = sps.find_peaks(
+    rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX],
+    prominence=1 * (10 ** (-8)),
+    distance=7,
+    height=2.5 * (10 ** (-8)),
+)
+
+np.array(peaks_index)
 # 0.0001
 # plt.figure()
 # plt.plot(x, fft_tran)
 # plt.yscale("log")
 
 print(sum(y) * 0.0028)
-print(np.shape(z))
+print(np.shape(peaks_index))
 # fig, ax = plt.subplots()  # Create a figure containing a single Axes.
-print(type(z))
+print(type(peaks_index))
 print(rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX])
 t = rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX]
-t = t[np.array(z)]
+t = t[np.array(peaks_index)]
 print(t)
 
 
-plt.figure()
+plt.figure(figsize=(18, 6))
 plt.plot(x, y)  # Plot some data on the Axes.
-plt.scatter(x[z], y[z])
+plt.scatter(x[peaks_index], y[peaks_index])
 # plt.yscale("log")
 
 plt.xlabel("Mass (Amu)")  # Add an x-label to the Axes.
@@ -162,21 +169,21 @@ plt.title("Test Plot")  # Add a title to the Axes.
 plt.grid()
 
 print("enter")
-plt.text((x[z])[7], (y[z])[7], (x[z])[7])
-print(len(x[z]))
+# plt.text((x[peaks_index])[7], (y[peaks_index])[7], (x[peaks_index])[7])
+print(len(x[peaks_index]))
 
-for i in range(len(x[z])):
+for i in range(len(x[peaks_index_thresholded])):
     print("Test")
     plt.text(
-        (x[z])[i],
-        (y[z])[i],
-        round(((x[z])[i]), 1),
-        rotation=75,
-        rotation_mode="default",
-        verticalalignment="bottom",
+        (x[peaks_index_thresholded])[i],
+        (y[peaks_index_thresholded])[i] + (3 * (10 ** (-8))),
+        round(((x[peaks_index_thresholded])[i]), 1),
+        rotation=90,
+        rotation_mode="anchor",
+        verticalalignment="center",
         horizontalalignment="left",
     )
-    print(((x[z])[i], (y[z])[i], (x[z])[i]))
+    # print(((x[peaks_index])[i], (y[peaks_index])[i], (x[peaks_index])[i]))
 # plt.tick_params(direction="out")
 print("exit")
 # for i in range(len(x[z])):
@@ -217,5 +224,7 @@ hi = [
     268,
     283,
 ]
+
+plt.savefig("graph", dpi = 250, bbox_inches = "tight")
 
 plt.show()
