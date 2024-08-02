@@ -5,6 +5,8 @@ import pandas as pan
 import matplotlib.pyplot as plt
 import scipy.signal as sps
 
+import json
+
 # import scienceplots
 import data_file_reader
 
@@ -17,15 +19,23 @@ import data_file_reader
 
 folder_path = r"E:\-SFU Physics Lab Work\HIM Room\Guneet\2024-07-11\RGA\Scan 3 - Increased Points - 2024_07_11\Analog-20240711-123603-709.rgadata"
 
-time_stamps, spectra, total_pressures, json_file, number_of_cycles = (
-    data_file_reader.read_file_data(folder_path)
-)
+time_stamps, spectra, total_pressures, json_file, number_of_cycles = data_file_reader.read_file_data(folder_path)
 
-json_split = json_file.replace(",", "").split("\n")
-points_per_amu = int((json_split[30])[28:])
-scan_rate = float((json_split[31])[24:])
-start_mass = int((json_split[32])[25:])
-stop_mass = int((json_split[33])[24:])
+json_dictionary = json.loads(json_file)
+test2 = json.dumps(json_file)
+
+print(json_dictionary)
+print(3 * "\n")
+json_dictionary["cfgs"][0]["pointsPerAmu"]
+json_dictionary["cfgs"][0]["scanRate"]
+json_dictionary["cfgs"][0]["startMass"]
+json_dictionary["cfgs"][0]["stopMass"]
+
+# json_split = json_file.replace(",", "").split("\n")
+points_per_amu = json_dictionary["cfgs"][0]["pointsPerAmu"]  # int((json_split[30])[28:])
+scan_rate = json_dictionary["cfgs"][0]["scanRate"]  # float((json_split[31])[24:])
+start_mass = json_dictionary["cfgs"][0]["startMass"] # int((json_split[32])[25:])
+stop_mass = json_dictionary["cfgs"][0]["stopMass"] # int((json_split[33])[24:])
 
 
 def import_to_array():
@@ -49,9 +59,7 @@ def import_to_array():
     number_of_amu_points = ((stop_mass - start_mass) * points_per_amu) + 1
 
     # array initialized for the right amount of space
-    rga_scan_data_array = np.ones(
-        (number_of_amu_points, number_of_cycles, LAYER_DIMENSIONS)
-    )
+    rga_scan_data_array = np.ones((number_of_amu_points, number_of_cycles, LAYER_DIMENSIONS))
 
     # its maybe more convinent to have the AMU position bundled in with the main array, may change if any preformance/ease of use issues occour
     amu_layer_vector = np.linspace(start_mass, stop_mass, number_of_amu_points)
@@ -142,14 +150,13 @@ np.array(peaks_index)
 # plt.plot(x, fft_tran)
 # plt.yscale("log")
 
-print(sum(y) * 0.0028)
-print(np.shape(peaks_index))
+# print(sum(y) * 0.0028)
+# print(np.shape(peaks_index))
 # fig, ax = plt.subplots()  # Create a figure containing a single Axes.
-print(type(peaks_index))
-print(rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX])
-t = rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX]
-t = t[np.array(peaks_index)]
-print(t)
+# print(rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX])
+# t = rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX]
+# t = t[np.array(peaks_index)]
+# print(t)
 
 
 plt.figure(figsize=(18, 6))
@@ -168,12 +175,9 @@ plt.ylabel("intensity (Torr)")  # Add a y-label to the Axes.
 plt.title("Test Plot")  # Add a title to the Axes.
 plt.grid()
 
-print("enter")
-# plt.text((x[peaks_index])[7], (y[peaks_index])[7], (x[peaks_index])[7])
-print(len(x[peaks_index]))
+# plt.text((x[peaks_index])[7], (y[peaks_index])[7], (x[peaks_index])[7])))
 
 for i in range(len(x[peaks_index_thresholded])):
-    print("Test")
     plt.text(
         (x[peaks_index_thresholded])[i],
         (y[peaks_index_thresholded])[i] + (3 * (10 ** (-8))),
@@ -183,9 +187,29 @@ for i in range(len(x[peaks_index_thresholded])):
         verticalalignment="center",
         horizontalalignment="left",
     )
-    # print(((x[peaks_index])[i], (y[peaks_index])[i], (x[peaks_index])[i]))
+
+
+def plot_chemical_name(name, x_position, y_position, va, ha):
+    plt.text(
+        x_position,
+        y_position,
+        name,
+        rotation_mode="default",
+        verticalalignment=va,
+        horizontalalignment=ha,
+    )
+
+
+# plt.text(32, (1.56 * (10 ** (-7))), "Oxygennnnnnn",
+# rotation_mode = "anchor",
+# verticalalignment = "center",
+# horizontalalignment = "center",
+# )
+
+plot_chemical_name("Oxy?gen", 32, (1.56 * (10 ** (-7))), va="center", ha="left")
+
+# print(((x[peaks_index])[i], (y[peaks_index])[i], (x[peaks_index])[i]))
 # plt.tick_params(direction="out")
-print("exit")
 # for i in range(len(x[z])):
 #     print((x[z])[i], (y[z])[i])
 
@@ -202,29 +226,8 @@ x = np.linspace(1, 10, 10)
 y = [7, 215, 423, 630, 838, 1046, 1254, 1461, 1669, 1877]
 
 
-hi = [
-    2,
-    17,
-    32,
-    46,
-    61,
-    76,
-    91,
-    106,
-    120,
-    135,
-    150,
-    165,
-    179,
-    194,
-    209,
-    224,
-    239,
-    253,
-    268,
-    283,
-]
+hi = [2, 17, 32, 46, 61, 76, 91, 106, 120, 135, 150, 165, 179, 194, 209, 224, 239, 253, 268, 283]
 
-plt.savefig("graph", dpi = 250, bbox_inches = "tight")
+# plt.savefig("graph", dpi=250, bbox_inches="tight")
 
-plt.show()
+# plt.show()

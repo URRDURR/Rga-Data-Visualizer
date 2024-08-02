@@ -1,0 +1,71 @@
+{
+    "molecules": [
+        {
+            "name": "CO2",
+            "mass1": 44,
+            "mass2": 0,
+            "mass3": 0,
+            "mass4": 0,
+            "mass5": 0,
+            "charge": 0
+        },
+        {
+            "name": "CO",
+            "mass1": 28,
+            "mass2": 0,
+            "mass3": 0,
+            "mass4": 0,
+            "mass5": 0,
+            "charge": 0
+        },
+        {
+            "name": "CH4",
+            "mass1": 16,
+            "mass2": 0,
+            "mass3": 0,
+            "mass4": 0,
+            "mass5": 0,
+            "charge": 0
+        },
+        {
+            "name": "N2",
+            "mass1": 28,
+            "mass2": 0,
+            "mass3": 0,
+            "mass4": 0,
+            "mass5": 0,
+            "charge": 0
+        },
+        {
+            "name": "O2",
+            "mass1": 32,
+            "mass2": 0,
+            "mass3": 0,
+            "mass4": 0,
+            "mass5": 0,
+            "charge": 0
+        },
+        {
+            "name": "NO",
+            "mass1": 30,
+            "mass2": 0,
+            "mass3": 0,
+            "mass4": 0,
+            "mass5": 0,
+            "charge": 0
+        },
+        {
+            "name": "H2O",
+            "mass1": 18,
+            "mass2": 0,
+            "mass3": 0,
+            "mass4": 0,
+            "mass5": 0,
+            "charge": 0
+        },
+        {
+            "name": "C2H6",
+            "mass1": 32
+        }
+    ]
+}
