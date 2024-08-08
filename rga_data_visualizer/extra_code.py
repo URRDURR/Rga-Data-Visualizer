@@ -107,3 +107,16 @@ def pressure_delta_calc(timings, rate, max):
     print("Theoretical gap:", (timings[1] - timings[0]))
 
     print("\n")
+
+    def fft_noise_removal(noisy_signal):
+    threshold = 0.0001
+    fhat = np.fft.fft(noisy_signal, len(noisy_signal))
+    PSD = fhat * np.conj(fhat) / len(noisy_signal)
+
+    indices = PSD < (0.09 * (10 ** (-10)))
+    print(indices)
+    PSDclean = PSD * indices
+    fhat = indices * fhat
+
+    ffilt = np.fft.ifft(fhat)
+    return ffilt

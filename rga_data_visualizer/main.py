@@ -25,6 +25,8 @@ time_stamps, spectra, total_pressures, json_file, number_of_cycles = data_file_r
 
 json_dictionary = json.loads(json_file)
 
+print(number_of_cycles)
+
 # print(json_dictionary)
 print(total_pressures)
 print(sum(time_stamps) / (len(time_stamps)))
@@ -41,26 +43,19 @@ print(points_per_amu, scan_rate, start_mass, stop_mass)
 def import_to_array():
 
     global rga_scan_data_array
-
     global amu_layer_vector
-
     global MASS_AMU_LAYER_INDEX
     MASS_AMU_LAYER_INDEX = 0
-
     global INTENSITY_TORR_LAYER_INDEX
     INTENSITY_TORR_LAYER_INDEX = 1
-
     global TIME_SECONDS_LAYER_INDEX
     TIME_SECONDS_LAYER_INDEX = 2
-
     # The array has a height of 3 to accomadate the AMU value, the time, and the pressure
     LAYER_DIMENSIONS = 3
 
     number_of_amu_points = ((stop_mass - start_mass) * points_per_amu) + 1
-
     # array initialized for the right amount of space
     rga_scan_data_array = np.ones((number_of_amu_points, number_of_cycles, LAYER_DIMENSIONS))
-
     # its maybe more convinent to have the AMU position bundled in with the main array, may change if any preformance/ease of use issues occour
     amu_layer_vector = np.linspace(start_mass, stop_mass, number_of_amu_points)
     amu_layer_array = amu_layer_vector[:, np.newaxis]
@@ -77,11 +72,10 @@ def import_to_array():
 
         for n in range(number_of_amu_points):
             rga_scan_data_array[n, i, TIME_SECONDS_LAYER_INDEX] = (
-                n * 200_000 / number_of_amu_points + sum(difference[0:i]) + 200_000 * i
+                n * 200_000 / number_of_amu_points + sum(difference[:i]) + 200_000 * i
             )
 
     rga_scan_data_array[:, :, MASS_AMU_LAYER_INDEX] = amu_layer_array
-
 
 def pressure_delta_calc(timings, rate, max):
 
@@ -97,7 +91,8 @@ def pressure_delta_calc(timings, rate, max):
         real_delta.append(timings[i + 1] - timings[i])
 
     differences = [x - (int(max / rate) * 1000) for x in real_delta]
-    differences.insert(0, 0)
+    print(differences)
+    # differences.insert(0, 0)
 
     # print("difference:", differences)
 
@@ -114,20 +109,6 @@ def pressure_delta_calc(timings, rate, max):
 
     return differences
 
-
-def fft_noise_removal(noisy_signal):
-    threshold = 0.0001
-    fhat = np.fft.fft(noisy_signal, len(noisy_signal))
-    PSD = fhat * np.conj(fhat) / len(noisy_signal)
-
-    indices = PSD < (0.09 * (10 ** (-10)))
-    print(indices)
-    PSDclean = PSD * indices
-    fhat = indices * fhat
-
-    ffilt = np.fft.ifft(fhat)
-    return ffilt
-
 def plot_chemical_name(name, x_position, y_position, va, ha):
     plt.text(
         x_position,
@@ -142,20 +123,26 @@ def plot_3d():
     fig = plt.figure()
     ax = fig.add_subplot(projection="3d")
 
-    x = rga_scan_data_array[:, 0:2, MASS_AMU_LAYER_INDEX]
-    y = rga_scan_data_array[:, 0:2, INTENSITY_TORR_LAYER_INDEX]
-    z = rga_scan_data_array[:, 0:2, TIME_SECONDS_LAYER_INDEX]
+    x = rga_scan_data_array[:, :, MASS_AMU_LAYER_INDEX]
+    y = rga_scan_data_array[:, :, INTENSITY_TORR_LAYER_INDEX]
+    z = rga_scan_data_array[:, :, TIME_SECONDS_LAYER_INDEX]
 
-    surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm, linewidth=0, antialiased=False)
+    surf = ax.plot_surface(x, z, y, cmap='summer', rstride=1, cstride=1, alpha=None, linewidth=0, antialiased=False)
 
     ax.set_xlabel("x")
-    ax.set_ylabel("y")
-    ax.set_zlabel("z")
+    ax.set_ylabel("z")
+    ax.set_zlabel("y")
+
 
 pressure_delta_calc(time_stamps, scan_rate, stop_mass)
 
 import_to_array()
 
+f = open("demofile3.txt", "w")
+f.write(str(rga_scan_data_array[:, 0, TIME_SECONDS_LAYER_INDEX]))
+f.close()
+
+print(len(rga_scan_data_array[:, 0, TIME_SECONDS_LAYER_INDEX]))
 print(rga_scan_data_array[:, 0, TIME_SECONDS_LAYER_INDEX])
 print(rga_scan_data_array[:, 1, TIME_SECONDS_LAYER_INDEX])
 print(rga_scan_data_array[:, 2, TIME_SECONDS_LAYER_INDEX])
@@ -210,7 +197,7 @@ for i in range(len(x[peaks_index_thresholded])):
         horizontalalignment="left",
     )
 
-plot_chemical_name("Oxy?gen", 32, (1.56 * (10 ** (-7))), va="center", ha="left")
+plot_chemical_name("Oxygen", 32, (1.56 * (10 ** (-7))), va="center", ha="left")
 
 # plt.savefig("graph", dpi=250, bbox_inches="tight")
 
