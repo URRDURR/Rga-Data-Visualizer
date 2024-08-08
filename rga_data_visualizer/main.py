@@ -5,6 +5,9 @@ import pandas as pan
 import matplotlib.pyplot as plt
 import scipy.signal as sps
 
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator
+
 import json
 
 # import scienceplots
@@ -13,29 +16,26 @@ import data_file_reader
 # import plotly.express as px
 
 # (plt.style.use("science"))
-
+np.set_printoptions(threshold=sys.maxsize)
 # np.set_printoptions(threshold=1000000000000, linewidth=1000000000000)
 
-
-folder_path = r"E:\-SFU Physics Lab Work\HIM Room\Guneet\2024-07-11\RGA\Scan 3 - Increased Points - 2024_07_11\Analog-20240711-123603-709.rgadata"
+folder_path = r"D:\-SFU Physics Lab Work\HIM Room\Guneet\2024-07-11\RGA\Scan 3 - Increased Points - 2024_07_11\Analog-20240711-123603-709.rgadata"
 
 time_stamps, spectra, total_pressures, json_file, number_of_cycles = data_file_reader.read_file_data(folder_path)
 
 json_dictionary = json.loads(json_file)
-test2 = json.dumps(json_file)
 
-print(json_dictionary)
-print(3 * "\n")
-json_dictionary["cfgs"][0]["pointsPerAmu"]
-json_dictionary["cfgs"][0]["scanRate"]
-json_dictionary["cfgs"][0]["startMass"]
-json_dictionary["cfgs"][0]["stopMass"]
+# print(json_dictionary)
+print(total_pressures)
+print(sum(time_stamps) / (len(time_stamps)))
 
 # json_split = json_file.replace(",", "").split("\n")
 points_per_amu = json_dictionary["cfgs"][0]["pointsPerAmu"]  # int((json_split[30])[28:])
 scan_rate = json_dictionary["cfgs"][0]["scanRate"]  # float((json_split[31])[24:])
-start_mass = json_dictionary["cfgs"][0]["startMass"] # int((json_split[32])[25:])
-stop_mass = json_dictionary["cfgs"][0]["stopMass"] # int((json_split[33])[24:])
+start_mass = json_dictionary["cfgs"][0]["startMass"]  # int((json_split[32])[25:])
+stop_mass = json_dictionary["cfgs"][0]["stopMass"]  # int((json_split[33])[24:])
+
+print(points_per_amu, scan_rate, start_mass, stop_mass)
 
 
 def import_to_array():
@@ -45,13 +45,13 @@ def import_to_array():
     global amu_layer_vector
 
     global MASS_AMU_LAYER_INDEX
-    MASS_AMU_LAYER_INDEX = 1
+    MASS_AMU_LAYER_INDEX = 0
 
     global INTENSITY_TORR_LAYER_INDEX
-    INTENSITY_TORR_LAYER_INDEX = 2
+    INTENSITY_TORR_LAYER_INDEX = 1
 
     global TIME_SECONDS_LAYER_INDEX
-    TIME_SECONDS_LAYER_INDEX = 3
+    TIME_SECONDS_LAYER_INDEX = 2
 
     # The array has a height of 3 to accomadate the AMU value, the time, and the pressure
     LAYER_DIMENSIONS = 3
@@ -67,14 +67,25 @@ def import_to_array():
     amu_layer_array = np.repeat(amu_layer_array, number_of_cycles, 1)
     rga_scan_data_array[:, :, MASS_AMU_LAYER_INDEX] = amu_layer_array
 
+    print("test", np.shape(rga_scan_data_array))
+
+    difference = pressure_delta_calc(time_stamps, scan_rate, stop_mass)
+
     for i in range(number_of_cycles):
+
         rga_scan_data_array[:, i, INTENSITY_TORR_LAYER_INDEX] = spectra[i]
+
+        for n in range(number_of_amu_points):
+            rga_scan_data_array[n, i, TIME_SECONDS_LAYER_INDEX] = (
+                n * 200_000 / number_of_amu_points + sum(difference[0:i]) + 200_000 * i
+            )
 
     rga_scan_data_array[:, :, MASS_AMU_LAYER_INDEX] = amu_layer_array
 
 
 def pressure_delta_calc(timings, rate, max):
 
+    # timings = [x/1000 for x in timings]
     print("Real timings:", timings)
 
     # guess = []
@@ -85,16 +96,23 @@ def pressure_delta_calc(timings, rate, max):
     for i in range(len(timings) - 1):
         real_delta.append(timings[i + 1] - timings[i])
 
-    # guess_delta = []
-    # for i in range(9):
-    #     delta.append(mtest[i + 1] - mtest[i])
-    # mtest.sort()
+    differences = [x - (int(max / rate) * 1000) for x in real_delta]
+    differences.insert(0, 0)
 
-    print("Real delta:", real_delta)
-    print("Theoretical time per scan", max / rate)
-    print("Theoretical gap:", (sum(real_delta) / (int(len(timings)) - 1)))
-    print(len(timings))
-    print("\n")
+    # print("difference:", differences)
+
+    # # guess_delta = []
+    # # for i in range(9):
+    # #     delta.append(mtest[i + 1] - mtest[i])
+    # # mtest.sort()
+
+    # print("Real delta:", real_delta)
+    # print("Theoretical time per scan", max / rate)
+    # print("Theoretical gap:", (sum(real_delta) / (int(len(timings)) - 1)))
+    # print(len(timings))
+    # print("\n")
+
+    return differences
 
 
 def fft_noise_removal(noisy_signal):
@@ -110,25 +128,42 @@ def fft_noise_removal(noisy_signal):
     ffilt = np.fft.ifft(fhat)
     return ffilt
 
+def plot_chemical_name(name, x_position, y_position, va, ha):
+    plt.text(
+        x_position,
+        y_position,
+        name,
+        rotation_mode="default",
+        verticalalignment=va,
+        horizontalalignment=ha,
+    )
 
-# def plot_figure():
+def plot_3d():
+    fig = plt.figure()
+    ax = fig.add_subplot(projection="3d")
 
+    x = rga_scan_data_array[:, 0:2, MASS_AMU_LAYER_INDEX]
+    y = rga_scan_data_array[:, 0:2, INTENSITY_TORR_LAYER_INDEX]
+    z = rga_scan_data_array[:, 0:2, TIME_SECONDS_LAYER_INDEX]
 
-# value = fft_noise_removal(y)
+    surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm, linewidth=0, antialiased=False)
 
-# plt.figure()
-# plt.plot(x, value)
-# plt.title("4")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+
+pressure_delta_calc(time_stamps, scan_rate, stop_mass)
 
 import_to_array()
 
-x = amu_layer_vector
-y = rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX]
+print(rga_scan_data_array[:, 0, TIME_SECONDS_LAYER_INDEX])
+print(rga_scan_data_array[:, 1, TIME_SECONDS_LAYER_INDEX])
+print(rga_scan_data_array[:, 2, TIME_SECONDS_LAYER_INDEX])
+print(rga_scan_data_array[:, 3, TIME_SECONDS_LAYER_INDEX])
+print(rga_scan_data_array[:, 4, TIME_SECONDS_LAYER_INDEX])
 
-# w = sps.savgol_filter(y, 7, 3)
-# plt.figure()
-# plt.plot(x, w)
-# plt.title("4")
+x = amu_layer_vector
+y = rga_scan_data_array[:, 3, INTENSITY_TORR_LAYER_INDEX]
 
 peaks_index, _ = sps.find_peaks(
     rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX],
@@ -145,19 +180,6 @@ peaks_index_thresholded, _ = sps.find_peaks(
 )
 
 np.array(peaks_index)
-# 0.0001
-# plt.figure()
-# plt.plot(x, fft_tran)
-# plt.yscale("log")
-
-# print(sum(y) * 0.0028)
-# print(np.shape(peaks_index))
-# fig, ax = plt.subplots()  # Create a figure containing a single Axes.
-# print(rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX])
-# t = rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX]
-# t = t[np.array(peaks_index)]
-# print(t)
-
 
 plt.figure(figsize=(18, 6))
 plt.plot(x, y)  # Plot some data on the Axes.
@@ -188,46 +210,10 @@ for i in range(len(x[peaks_index_thresholded])):
         horizontalalignment="left",
     )
 
-
-def plot_chemical_name(name, x_position, y_position, va, ha):
-    plt.text(
-        x_position,
-        y_position,
-        name,
-        rotation_mode="default",
-        verticalalignment=va,
-        horizontalalignment=ha,
-    )
-
-
-# plt.text(32, (1.56 * (10 ** (-7))), "Oxygennnnnnn",
-# rotation_mode = "anchor",
-# verticalalignment = "center",
-# horizontalalignment = "center",
-# )
-
 plot_chemical_name("Oxy?gen", 32, (1.56 * (10 ** (-7))), va="center", ha="left")
-
-# print(((x[peaks_index])[i], (y[peaks_index])[i], (x[peaks_index])[i]))
-# plt.tick_params(direction="out")
-# for i in range(len(x[z])):
-#     print((x[z])[i], (y[z])[i])
-
-# plt.figure()
-# plt.plot(x, y)
-# plt.xlabel("Mass (Amu)")
-# plt.ylabel("intensity (Torr)")
-# plt.xticks(start_mass, stop_mass, 5)
-# plt.yscale("log")
-# plt.tick_params()
-
-x = np.linspace(1, 10, 10)
-# print(x)
-y = [7, 215, 423, 630, 838, 1046, 1254, 1461, 1669, 1877]
-
-
-hi = [2, 17, 32, 46, 61, 76, 91, 106, 120, 135, 150, 165, 179, 194, 209, 224, 239, 253, 268, 283]
 
 # plt.savefig("graph", dpi=250, bbox_inches="tight")
 
-# plt.show()
+plot_3d()
+
+plt.show()
