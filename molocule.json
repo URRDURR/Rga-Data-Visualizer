@@ -1,0 +1,36 @@
+{
+    "molecules": [
+        {
+            "name": "CO2",
+            "mass": 44
+        },
+        {
+            "name": "CO",
+            "mass": 28
+        },
+        {
+            "name": "CH4",
+            "mass": 16
+        },
+        {
+            "name": "N2",
+            "mass": 28
+        },
+        {
+            "name": "O2",
+            "mass": 32
+        },
+        {
+            "name": "NO",
+            "mass": 30
+        },
+        {
+            "name": "H2O",
+            "mass": 18
+        },
+        {
+            "name": "C2H6",
+            "mass": 32
+        }
+    ]
+}

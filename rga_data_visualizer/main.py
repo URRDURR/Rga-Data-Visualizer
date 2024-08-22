@@ -4,78 +4,40 @@ import numpy as np
 import pandas as pan
 import matplotlib.pyplot as plt
 import scipy.signal as sps
-
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator
-
 import json
-
-# import scienceplots
+from tkinter import filedialog as fd
 import data_file_reader
 
+# import scienceplots
 # import plotly.express as px
 
 # (plt.style.use("science"))
-np.set_printoptions(threshold=sys.maxsize)
-# np.set_printoptions(threshold=1000000000000, linewidth=1000000000000)
-
-folder_path = r"D:\-SFU Physics Lab Work\HIM Room\Guneet\2024-07-11\RGA\Scan 3 - Increased Points - 2024_07_11\Analog-20240711-123603-709.rgadata"
-
-time_stamps, spectra, total_pressures, json_file, number_of_cycles = data_file_reader.read_file_data(folder_path)
-
-json_dictionary = json.loads(json_file)
-
-print(number_of_cycles)
-
-# print(json_dictionary)
-print(total_pressures)
-print(sum(time_stamps) / (len(time_stamps)))
-
-# json_split = json_file.replace(",", "").split("\n")
-points_per_amu = json_dictionary["cfgs"][0]["pointsPerAmu"]  # int((json_split[30])[28:])
-scan_rate = json_dictionary["cfgs"][0]["scanRate"]  # float((json_split[31])[24:])
-start_mass = json_dictionary["cfgs"][0]["startMass"]  # int((json_split[32])[25:])
-stop_mass = json_dictionary["cfgs"][0]["stopMass"]  # int((json_split[33])[24:])
-
-print(points_per_amu, scan_rate, start_mass, stop_mass)
 
 
-def import_to_array():
-
-    global rga_scan_data_array
-    global amu_layer_vector
-    global MASS_AMU_LAYER_INDEX
-    MASS_AMU_LAYER_INDEX = 0
-    global INTENSITY_TORR_LAYER_INDEX
-    INTENSITY_TORR_LAYER_INDEX = 1
-    global TIME_SECONDS_LAYER_INDEX
-    TIME_SECONDS_LAYER_INDEX = 2
-    # The array has a height of 3 to accomadate the AMU value, the time, and the pressure
-    LAYER_DIMENSIONS = 3
+def import_to_array(start_mass, stop_mass, points_per_amu, number_of_cycles):
 
     number_of_amu_points = ((stop_mass - start_mass) * points_per_amu) + 1
+
     # array initialized for the right amount of space
     rga_scan_data_array = np.ones((number_of_amu_points, number_of_cycles, LAYER_DIMENSIONS))
+
     # its maybe more convinent to have the AMU position bundled in with the main array, may change if any preformance/ease of use issues occour
     amu_layer_vector = np.linspace(start_mass, stop_mass, number_of_amu_points)
     amu_layer_array = amu_layer_vector[:, np.newaxis]
     amu_layer_array = np.repeat(amu_layer_array, number_of_cycles, 1)
-    rga_scan_data_array[:, :, MASS_AMU_LAYER_INDEX] = amu_layer_array
+    rga_scan_data_array[:, :, MASS_AMU_INDEX] = amu_layer_array
 
-    print("test", np.shape(rga_scan_data_array))
-
-    difference = pressure_delta_calc(time_stamps, scan_rate, stop_mass)
+    # difference = pressure_delta_calc(time_stamps, scan_rate, stop_mass)
 
     for i in range(number_of_cycles):
-
-        rga_scan_data_array[:, i, INTENSITY_TORR_LAYER_INDEX] = spectra[i]
-
+        rga_scan_data_array[:, i, INTENSITY_TORR_INDEX] = spectra[i]
         for n in range(number_of_amu_points):
-            rga_scan_data_array[n, i, TIME_SECONDS_LAYER_INDEX] = (
-                n * 200_000 / number_of_amu_points + sum(difference[:i]) + 200_000 * i
-            )
+            rga_scan_data_array[n, i, TIME_SECONDS_INDEX] = n * 200_000 / number_of_amu_points + sum(difference[:i]) + 200_000 * i
 
-    rga_scan_data_array[:, :, MASS_AMU_LAYER_INDEX] = amu_layer_array
+    return rga_scan_data_array, amu_layer_vector
+
 
 def pressure_delta_calc(timings, rate, max):
 
@@ -109,98 +71,119 @@ def pressure_delta_calc(timings, rate, max):
 
     return differences
 
-def plot_chemical_name(name, x_position, y_position, va, ha):
-    plt.text(
-        x_position,
-        y_position,
-        name,
-        rotation_mode="default",
-        verticalalignment=va,
-        horizontalalignment=ha,
-    )
 
-def plot_3d():
+def plot_3d(scan_data):
     fig = plt.figure()
     ax = fig.add_subplot(projection="3d")
 
-    x = rga_scan_data_array[:, :, MASS_AMU_LAYER_INDEX]
-    y = rga_scan_data_array[:, :, INTENSITY_TORR_LAYER_INDEX]
-    z = rga_scan_data_array[:, :, TIME_SECONDS_LAYER_INDEX]
+    x = scan_data[:, :, MASS_AMU_INDEX]
+    y = scan_data[:, :, INTENSITY_TORR_INDEX]
+    z = scan_data[:, :, TIME_SECONDS_INDEX]
 
-    surf = ax.plot_surface(x, z, y, cmap='summer', rstride=1, cstride=1, alpha=None, linewidth=0, antialiased=False)
+    surf = ax.plot_surface(x, z, y, cmap="summer", rstride=1, cstride=1, alpha=None, linewidth=0, antialiased=False)
 
-    ax.set_xlabel("x")
-    ax.set_ylabel("z")
-    ax.set_zlabel("y")
+    ax.set_xlabel("x: Mass (AMU)")
+    ax.set_ylabel("z: Time (Seconds)")
+    ax.set_zlabel("y: Pressure (Torr)")
 
 
-pressure_delta_calc(time_stamps, scan_rate, stop_mass)
+def plot_2d(scan_data):
+    x = scan_data[:, 3, MASS_AMU_INDEX]
+    y = scan_data[:, 3, INTENSITY_TORR_INDEX]
 
-import_to_array()
-
-f = open("demofile3.txt", "w")
-f.write(str(rga_scan_data_array[:, 0, TIME_SECONDS_LAYER_INDEX]))
-f.close()
-
-print(len(rga_scan_data_array[:, 0, TIME_SECONDS_LAYER_INDEX]))
-print(rga_scan_data_array[:, 0, TIME_SECONDS_LAYER_INDEX])
-print(rga_scan_data_array[:, 1, TIME_SECONDS_LAYER_INDEX])
-print(rga_scan_data_array[:, 2, TIME_SECONDS_LAYER_INDEX])
-print(rga_scan_data_array[:, 3, TIME_SECONDS_LAYER_INDEX])
-print(rga_scan_data_array[:, 4, TIME_SECONDS_LAYER_INDEX])
-
-x = amu_layer_vector
-y = rga_scan_data_array[:, 3, INTENSITY_TORR_LAYER_INDEX]
-
-peaks_index, _ = sps.find_peaks(
-    rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX],
-    prominence=1 * (10 ** (-8)),
-    distance=7,
-    height=1 * (10 ** (-8)),
-)  # , height=6* (10 ** (-8)))
-
-peaks_index_thresholded, _ = sps.find_peaks(
-    rga_scan_data_array[:, 1, INTENSITY_TORR_LAYER_INDEX],
-    prominence=1 * (10 ** (-8)),
-    distance=7,
-    height=2.5 * (10 ** (-8)),
-)
-
-np.array(peaks_index)
-
-plt.figure(figsize=(18, 6))
-plt.plot(x, y)  # Plot some data on the Axes.
-plt.scatter(x[peaks_index], y[peaks_index])
-# plt.yscale("log")
-
-plt.xlabel("Mass (Amu)")  # Add an x-label to the Axes.
-plt.xticks(np.arange(start_mass - 1, stop_mass + 1, 5))
-plt.xticks(np.arange(start_mass - 1, stop_mass + 1, 1), minor=True)
-
-# plt.yticks(np.arange(0, max(t), 1), minor=True)
-
-# ax.set_xticks(np.arange(start_mass,stop_mass,6),minor=True)
-plt.ylabel("intensity (Torr)")  # Add a y-label to the Axes.
-plt.title("Test Plot")  # Add a title to the Axes.
-plt.grid()
-
-# plt.text((x[peaks_index])[7], (y[peaks_index])[7], (x[peaks_index])[7])))
-
-for i in range(len(x[peaks_index_thresholded])):
-    plt.text(
-        (x[peaks_index_thresholded])[i],
-        (y[peaks_index_thresholded])[i] + (3 * (10 ** (-8))),
-        round(((x[peaks_index_thresholded])[i]), 1),
-        rotation=90,
-        rotation_mode="anchor",
-        verticalalignment="center",
-        horizontalalignment="left",
+    peaks, _ = sps.find_peaks(
+        scan_data[:, 3, INTENSITY_TORR_INDEX],
+        prominence=1 * (10 ** (-8)),
+        distance=7,
+        height=1 * (10 ** (-8)),
     )
 
-plot_chemical_name("Oxygen", 32, (1.56 * (10 ** (-7))), va="center", ha="left")
+    primary_peaks = []
+    for i in peaks:
+        if scan_data[i, 3, INTENSITY_TORR_INDEX] >= 2.5 * (10 ** (-8)):
+            primary_peaks.append(i)
+    primary_peaks = np.array(primary_peaks)
 
-# plt.savefig("graph", dpi=250, bbox_inches="tight")
+    plt.figure(figsize=(18, 6))
+    plt.plot(x, y)  # Plot some data on the Axes.
+    plt.scatter(x[peaks], y[peaks])
+    # plt.yscale("log")
+    plt.xlabel("Mass (Amu)")  # Add an x-label to the Axes.
+    plt.xticks(np.arange(start_mass - 1, stop_mass + 1, 5))
+    plt.xticks(np.arange(start_mass - 1, stop_mass + 1, 1), minor=True)
+    # plt.yticks(np.arange(0, max(t), 1), minor=True)
+    # ax.set_xticks(np.arange(start_mass,stop_mass,6),minor=True)
+    plt.ylabel("intensity (Torr)")  # Add a y-label to the Axes.
+    plt.title("Test Plot")  # Add a title to the Axes.
+    plt.grid()
 
-plot_3d()
+    # plt.text((x[peaks_index])[7], (y[peaks_index])[7], (x[peaks_index])[7])
+    # for i in len(molocule_json_output["molecules"]):
+    #     m = molocule_json_output["molecules"][i]["mass"]
+
+    # values = set(m) & set(peaks_index_thresholded)
+
+    for i in range(len(x[primary_peaks])):
+        name = ""
+        for n in range(len(molocule_json_output["molecules"])):
+            if (x[primary_peaks])[i] + 0.5 >= molocule_json_output["molecules"][n]["mass"] and (x[primary_peaks])[
+                i
+            ] - 0.5 <= molocule_json_output["molecules"][n]["mass"]:
+                if name != "":
+                    name += "/" + molocule_json_output["molecules"][n]["name"]
+                    continue
+                name = " " + molocule_json_output["molecules"][n]["name"]
+
+        plt.text(
+            (x[primary_peaks])[i],
+            (y[primary_peaks])[i] + (3 * (10 ** (-8))),
+            str(round(((x[primary_peaks])[i]), 1)) + name,
+            rotation=90,
+            rotation_mode="anchor",
+            verticalalignment="center",
+            horizontalalignment="left",
+        )
+
+        # plt.savefig("graph", dpi=250, bbox_inches="tight")
+
+
+def halflife():
+    pass
+
+
+# Currently being done under the assumption that we are only using the 3rd scan
+# The array has a height of 3 to accomadate the AMU value, the time, and the pressure
+MASS_AMU_INDEX = 0
+INTENSITY_TORR_INDEX = 1
+TIME_SECONDS_INDEX = 2
+LAYER_DIMENSIONS = 3
+PATH_VIA_TERMINAL = False
+
+if PATH_VIA_TERMINAL == True:
+    print("Enter folder location")
+    folder_path = fd.askdirectory()
+else:
+    folder_path = r"C:\Users\gma78\OneDrive - Simon Fraser University (1sfu)\KavanaghLab\02-Personal_Folders\Guneet Malhotra\HIM Room\Guneet\2024-07-11\RGA\Scan 3 - Increased Points - 2024_07_11\Analog-20240711-123603-709.rgadata"
+
+time_stamps, spectra, total_pressures, json_file, number_of_cycles = data_file_reader.read_file_data(folder_path)
+
+rga_json_data = json.loads(json_file)
+points_per_amu = rga_json_data["cfgs"][0]["pointsPerAmu"]
+scan_rate = rga_json_data["cfgs"][0]["scanRate"]
+start_mass = rga_json_data["cfgs"][0]["startMass"]
+stop_mass = rga_json_data["cfgs"][0]["stopMass"]
+
+f = open("molocule.json")
+molocule_json_output = json.load(f)
+f.close()
+
+rga_scan_data, amu_layer_vector = import_to_array(start_mass, stop_mass, points_per_amu, number_of_cycles)
+
+while True:
+    break
+
+plot_3d(rga_scan_data)
+
+plot_2d(rga_scan_data)
 
 plt.show()

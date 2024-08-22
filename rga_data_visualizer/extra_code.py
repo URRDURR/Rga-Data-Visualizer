@@ -120,3 +120,13 @@ def pressure_delta_calc(timings, rate, max):
 
     ffilt = np.fft.ifft(fhat)
     return ffilt
+
+def plot_chemical_name(name, x_position, y_position, va, ha):
+    plt.text(
+        x_position,
+        y_position,
+        name,
+        rotation_mode="default",
+        verticalalignment=va,
+        horizontalalignment=ha,
+    )
