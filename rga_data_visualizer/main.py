@@ -9,6 +9,7 @@ from matplotlib.ticker import LinearLocator
 import json
 from tkinter import filedialog as fd
 import data_file_reader
+import pandas as pd
 
 # import scienceplots
 # import plotly.express as px
@@ -29,20 +30,20 @@ def import_to_array(start_mass, stop_mass, points_per_amu, number_of_cycles):
     amu_layer_array = np.repeat(amu_layer_array, number_of_cycles, 1)
     rga_scan_data_array[:, :, MASS_AMU_INDEX] = amu_layer_array
 
-    # difference = pressure_delta_calc(time_stamps, scan_rate, stop_mass)
+    difference = pressure_delta_calc(time_stamps, scan_rate, stop_mass)
 
     for i in range(number_of_cycles):
         rga_scan_data_array[:, i, INTENSITY_TORR_INDEX] = spectra[i]
         for n in range(number_of_amu_points):
             rga_scan_data_array[n, i, TIME_SECONDS_INDEX] = n * 200_000 / number_of_amu_points + sum(difference[:i]) + 200_000 * i
 
-    return rga_scan_data_array, amu_layer_vector
+    return rga_scan_data_array
 
 
 def pressure_delta_calc(timings, rate, max):
 
     # timings = [x/1000 for x in timings]
-    print("Real timings:", timings)
+    # print("Real timings:", timings)
 
     # guess = []
     # for i in range(len(timings)-1):
@@ -53,7 +54,7 @@ def pressure_delta_calc(timings, rate, max):
         real_delta.append(timings[i + 1] - timings[i])
 
     differences = [x - (int(max / rate) * 1000) for x in real_delta]
-    print(differences)
+    # print(differences)
     # differences.insert(0, 0)
 
     # print("difference:", differences)
@@ -87,12 +88,12 @@ def plot_3d(scan_data):
     ax.set_zlabel("y: Pressure (Torr)")
 
 
-def plot_2d(scan_data):
-    x = scan_data[:, 3, MASS_AMU_INDEX]
-    y = scan_data[:, 3, INTENSITY_TORR_INDEX]
-
+def plot_2d(scan_data, scan_number):
+    x = scan_data[:, scan_number, MASS_AMU_INDEX]
+    y = scan_data[:, scan_number, INTENSITY_TORR_INDEX]
+    print(scan_number)
     peaks, _ = sps.find_peaks(
-        scan_data[:, 3, INTENSITY_TORR_INDEX],
+        scan_data[:, scan_number, INTENSITY_TORR_INDEX],
         prominence=1 * (10 ** (-8)),
         distance=7,
         height=1 * (10 ** (-8)),
@@ -100,7 +101,7 @@ def plot_2d(scan_data):
 
     primary_peaks = []
     for i in peaks:
-        if scan_data[i, 3, INTENSITY_TORR_INDEX] >= 2.5 * (10 ** (-8)):
+        if scan_data[i, scan_number, INTENSITY_TORR_INDEX] >= 2.5 * (10 ** (-8)):
             primary_peaks.append(i)
     primary_peaks = np.array(primary_peaks)
 
@@ -161,11 +162,11 @@ PATH_VIA_TERMINAL = False
 
 if PATH_VIA_TERMINAL == True:
     print("Enter folder location")
-    folder_path = fd.askdirectory()
+    file_path = fd.askopenfilename()
 else:
-    folder_path = r"C:\Users\gma78\OneDrive - Simon Fraser University (1sfu)\KavanaghLab\02-Personal_Folders\Guneet Malhotra\HIM Room\Guneet\2024-07-11\RGA\Scan 3 - Increased Points - 2024_07_11\Analog-20240711-123603-709.rgadata"
+    file_path = r"C:\Users\gma78\OneDrive - Simon Fraser University (1sfu)\KavanaghLab\02-Personal_Folders\Guneet Malhotra\HIM Room\Guneet\2024-07-11\RGA\Scan 3 - Increased Points - 2024_07_11\Analog-20240711-123603-709.rgadata"
 
-time_stamps, spectra, total_pressures, json_file, number_of_cycles = data_file_reader.read_file_data(folder_path)
+time_stamps, spectra, total_pressures, json_file, number_of_cycles = data_file_reader.read_file_data(file_path)
 
 rga_json_data = json.loads(json_file)
 points_per_amu = rga_json_data["cfgs"][0]["pointsPerAmu"]
@@ -177,13 +178,31 @@ f = open("molocule.json")
 molocule_json_output = json.load(f)
 f.close()
 
-rga_scan_data, amu_layer_vector = import_to_array(start_mass, stop_mass, points_per_amu, number_of_cycles)
+rga_scan_data = import_to_array(start_mass, stop_mass, points_per_amu, number_of_cycles)
 
 while True:
-    break
+    selection = input("\nwould you like a 2D plot [1], 3D plot [2], halflife data [3], or exit [4]?: ")
+    if selection == "1":
+        while True:
+            subscan = input("which sub-scan would you like to graph?: ")
+            if subscan.isnumeric():
+                if int(subscan) <= number_of_cycles:
+                    subscan = int(subscan) - 1
+                    break
+                print("number is larger than number of scans, please try again\n")
+                continue
+            print("please try again\n")
+        plot_2d(rga_scan_data, subscan)
+        plt.show()
+        continue
 
-plot_3d(rga_scan_data)
+    elif selection == "2":
+        plot_3d(rga_scan_data)
+        plt.show()
 
-plot_2d(rga_scan_data)
-
-plt.show()
+    elif selection == "3":
+        print("todo")
+    elif selection == "4":
+        break
+    else:
+        print("please try again")

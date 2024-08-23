@@ -1,5 +1,8 @@
 import os
 
+while(True):
+    continue
+
 # give the locations of all files of a type in a folder
 def extract_file_locations(folder_path,file_type):
 
@@ -46,7 +49,7 @@ def import_to_array():
     # The array has a height of 3 to accomadate the AMU value, the time, and the pressure
     DIMENSIONS = 3
 
-    number_of_amu_points = 
+    number_of_amu_points = 1
 
     main_array = np.ones((number_of_amu_points, number_of_cycles, DIMENSIONS))
     # print(main_array)
@@ -108,7 +111,7 @@ def pressure_delta_calc(timings, rate, max):
 
     print("\n")
 
-    def fft_noise_removal(noisy_signal):
+def fft_noise_removal(noisy_signal):
     threshold = 0.0001
     fhat = np.fft.fft(noisy_signal, len(noisy_signal))
     PSD = fhat * np.conj(fhat) / len(noisy_signal)

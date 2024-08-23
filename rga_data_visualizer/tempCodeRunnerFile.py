@@ -1,1 +1,1 @@
-np.array(test)
+test
