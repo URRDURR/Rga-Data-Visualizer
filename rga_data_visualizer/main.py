@@ -180,6 +180,7 @@ f.close()
 
 rga_scan_data = import_to_array(start_mass, stop_mass, points_per_amu, number_of_cycles)
 
+# This is bad code I do not know how to fix
 while True:
     selection = input("\nwould you like a 2D plot [1], 3D plot [2], halflife data [3], or exit [4]?: ")
     if selection == "1":
