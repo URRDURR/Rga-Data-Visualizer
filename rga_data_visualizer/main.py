@@ -181,6 +181,9 @@ else:
 
 time_stamps, spectra, total_pressures, json_file, number_of_cycles = data_file_reader.read_file_data(file_path)
 
+print(time_stamps)
+print(total_pressures)
+
 rga_json_data = json.loads(json_file)
 # points_per_amu = rga_json_data["cfgs"][0]["pointsPerAmu"]
 # scan_rate = rga_json_data["cfgs"][0]["scanRate"]

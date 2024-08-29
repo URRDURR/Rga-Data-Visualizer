@@ -1,1 +1,1 @@
-test
+(plt.style.use("science"))
