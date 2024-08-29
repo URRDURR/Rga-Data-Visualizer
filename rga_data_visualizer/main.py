@@ -91,7 +91,7 @@ def plot_3d(scan_data):
     ax.set_zlabel("y: Pressure (Torr)")
 
 
-def plot_2d(scan_data, scan_number):
+def plot_2d(scan_data, scan_number, title):
     x = scan_data[:, scan_number, MASS_AMU_INDEX]
     y = scan_data[:, scan_number, INTENSITY_TORR_INDEX]
 
@@ -101,8 +101,6 @@ def plot_2d(scan_data, scan_number):
         distance=7,
         height=1 * (10 ** (-8)),
     )
-
-    # TODO: Try list comprehension here
 
     # primary_peaks = []
     # for i in peaks:
@@ -126,7 +124,7 @@ def plot_2d(scan_data, scan_number):
     # plt.yticks(np.arange(0, max(t), 1), minor=True)
     # ax.set_xticks(np.arange(start_mass,stop_mass,6),minor=True)
     plt.ylabel("intensity (Torr)")  # Add a y-label to the Axes.
-    plt.title("Test Plot")  # Add a title to the Axes.
+    plt.title(title)  # Add a title to the Axes.
     plt.grid()
 
     # plt.text((x[peaks_index])[7], (y[peaks_index])[7], (x[peaks_index])[7])
@@ -211,8 +209,8 @@ while True:
                 break
             else:
                 print("please try again\n")
-
-        plot_2d(rga_scan_data, subscan)
+        title = input("Title?: ")
+        plot_2d(rga_scan_data, subscan, title)
 
         plt.show()
         continue
