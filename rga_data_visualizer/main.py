@@ -1,30 +1,34 @@
-import os
-import sys
+import json
+from operator import itemgetter
+from tkinter import filedialog as fd
+
 import numpy as np
-import pandas as pan
+import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.signal as sps
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator
-import json
-from tkinter import filedialog as fd
+
 import data_file_reader
-import pandas as pd
 
 # import scienceplots
 # import plotly.express as px
 
 # (plt.style.use("science"))
 
+# The array has a height of 3 to accomadate the AMU value, the time, and the pressure
+MASS_AMU_INDEX = 0
+INTENSITY_TORR_INDEX = 1
+TIME_SECONDS_INDEX = 2
+LAYER_DIMENSIONS = 3
+
 
 def import_to_array(start_mass, stop_mass, points_per_amu, number_of_cycles):
-
     number_of_amu_points = ((stop_mass - start_mass) * points_per_amu) + 1
 
     # array initialized for the right amount of space
     rga_scan_data_array = np.ones((number_of_amu_points, number_of_cycles, LAYER_DIMENSIONS))
 
-    # its maybe more convinent to have the AMU position bundled in with the main array, may change if any preformance/ease of use issues occour
+    # its maybe more convinent to have the AMU position bundled in with the
+    # main array, may change if any preformance/ease of use issues occour
     amu_layer_vector = np.linspace(start_mass, stop_mass, number_of_amu_points)
     amu_layer_array = amu_layer_vector[:, np.newaxis]
     amu_layer_array = np.repeat(amu_layer_array, number_of_cycles, 1)
@@ -40,8 +44,7 @@ def import_to_array(start_mass, stop_mass, points_per_amu, number_of_cycles):
     return rga_scan_data_array
 
 
-def pressure_delta_calc(timings, rate, max):
-
+def pressure_delta_calc(timings, rate, maximum):
     # timings = [x/1000 for x in timings]
     # print("Real timings:", timings)
 
@@ -53,7 +56,7 @@ def pressure_delta_calc(timings, rate, max):
     for i in range(len(timings) - 1):
         real_delta.append(timings[i + 1] - timings[i])
 
-    differences = [x - (int(max / rate) * 1000) for x in real_delta]
+    differences = [x - (int(maximum / rate) * 1000) for x in real_delta]
     # print(differences)
     # differences.insert(0, 0)
 
@@ -91,7 +94,7 @@ def plot_3d(scan_data):
 def plot_2d(scan_data, scan_number):
     x = scan_data[:, scan_number, MASS_AMU_INDEX]
     y = scan_data[:, scan_number, INTENSITY_TORR_INDEX]
-    print(scan_number)
+
     peaks, _ = sps.find_peaks(
         scan_data[:, scan_number, INTENSITY_TORR_INDEX],
         prominence=1 * (10 ** (-8)),
@@ -99,11 +102,19 @@ def plot_2d(scan_data, scan_number):
         height=1 * (10 ** (-8)),
     )
 
-    primary_peaks = []
-    for i in peaks:
-        if scan_data[i, scan_number, INTENSITY_TORR_INDEX] >= 2.5 * (10 ** (-8)):
-            primary_peaks.append(i)
-    primary_peaks = np.array(primary_peaks)
+    # TODO: Try list comprehension here
+
+    # primary_peaks = []
+    # for i in peaks:
+    #     if scan_data[i, scan_number, INTENSITY_TORR_INDEX] >= 2.5 * (10 ** (-8)):
+    #         primary_peaks.append(i)
+    # primary_peaks = np.array(primary_peaks)
+
+    PEAK_SIGNIFICANCE_THRESHOLD = 2.5 * (10 ** (-8))
+
+    significant_peaks = np.array(
+        [(peak_index) for peak_index in peaks if (scan_data[peak_index, scan_number, INTENSITY_TORR_INDEX] >= PEAK_SIGNIFICANCE_THRESHOLD)]
+    )
 
     plt.figure(figsize=(18, 6))
     plt.plot(x, y)  # Plot some data on the Axes.
@@ -124,21 +135,25 @@ def plot_2d(scan_data, scan_number):
 
     # values = set(m) & set(peaks_index_thresholded)
 
-    for i in range(len(x[primary_peaks])):
+    significant_peak_masses = x[significant_peaks]
+    significant_peak_pressures = y[significant_peaks]
+
+    for i, significant_peak_mass in enumerate(significant_peak_masses):
         name = ""
-        for n in range(len(molocule_json_output["molecules"])):
-            if (x[primary_peaks])[i] + 0.5 >= molocule_json_output["molecules"][n]["mass"] and (x[primary_peaks])[
-                i
-            ] - 0.5 <= molocule_json_output["molecules"][n]["mass"]:
+
+        for _, compound in enumerate(compounds_dictionary):
+            if significant_peak_mass - 0.5 <= compound["mass"] <= significant_peak_mass + 0.5:
+                print(significant_peak_mass)
                 if name != "":
-                    name += "/" + molocule_json_output["molecules"][n]["name"]
-                    continue
-                name = " " + molocule_json_output["molecules"][n]["name"]
+                    name += "/" + compound["name"]
+                else:
+                    name = " " + compound["name"]
+        print(name)
 
         plt.text(
-            (x[primary_peaks])[i],
-            (y[primary_peaks])[i] + (3 * (10 ** (-8))),
-            str(round(((x[primary_peaks])[i]), 1)) + name,
+            significant_peak_mass,
+            significant_peak_pressures[i] + (3 * (10 ** (-8))),
+            str(round((significant_peak_mass), 1)) + name,
             rotation=90,
             rotation_mode="anchor",
             verticalalignment="center",
@@ -148,19 +163,19 @@ def plot_2d(scan_data, scan_number):
         # plt.savefig("graph", dpi=250, bbox_inches="tight")
 
 
-def halflife():
-    pass
+def halflife(scan_data):
+    value = scan_data[18, :, :]
+    print(np.shape(value))
+    dfo = pd.DataFrame(value)
+    print(dfo)
+
+    dfo.to_csv("file4.csv", index=False)
 
 
 # Currently being done under the assumption that we are only using the 3rd scan
-# The array has a height of 3 to accomadate the AMU value, the time, and the pressure
-MASS_AMU_INDEX = 0
-INTENSITY_TORR_INDEX = 1
-TIME_SECONDS_INDEX = 2
-LAYER_DIMENSIONS = 3
 PATH_VIA_TERMINAL = False
 
-if PATH_VIA_TERMINAL == True:
+if PATH_VIA_TERMINAL:
     print("Enter folder location")
     file_path = fd.askopenfilename()
 else:
@@ -169,31 +184,36 @@ else:
 time_stamps, spectra, total_pressures, json_file, number_of_cycles = data_file_reader.read_file_data(file_path)
 
 rga_json_data = json.loads(json_file)
-points_per_amu = rga_json_data["cfgs"][0]["pointsPerAmu"]
-scan_rate = rga_json_data["cfgs"][0]["scanRate"]
-start_mass = rga_json_data["cfgs"][0]["startMass"]
-stop_mass = rga_json_data["cfgs"][0]["stopMass"]
+# points_per_amu = rga_json_data["cfgs"][0]["pointsPerAmu"]
+# scan_rate = rga_json_data["cfgs"][0]["scanRate"]
+# start_mass = rga_json_data["cfgs"][0]["startMass"]
+# stop_mass = rga_json_data["cfgs"][0]["stopMass"]
 
-f = open("molocule.json")
-molocule_json_output = json.load(f)
-f.close()
+points_per_amu, scan_rate, start_mass, stop_mass = itemgetter("pointsPerAmu", "scanRate", "startMass", "stopMass")(
+    rga_json_data["cfgs"][0]
+)
+
+with open("molocule.json", encoding="utf-8") as file:
+    compounds_dictionary = json.load(file)
 
 rga_scan_data = import_to_array(start_mass, stop_mass, points_per_amu, number_of_cycles)
 
-# This is bad code I do not know how to fix
 while True:
     selection = input("\nwould you like a 2D plot [1], 3D plot [2], halflife data [3], or exit [4]?: ")
     if selection == "1":
         while True:
             subscan = input("which sub-scan would you like to graph?: ")
-            if subscan.isnumeric():
-                if int(subscan) <= number_of_cycles:
-                    subscan = int(subscan) - 1
-                    break
+            if subscan.isnumeric() and (int(subscan) > number_of_cycles):
                 print("number is larger than number of scans, please try again\n")
                 continue
-            print("please try again\n")
+            elif subscan.isnumeric() and (int(subscan) <= number_of_cycles):
+                subscan = int(subscan) - 1
+                break
+            else:
+                print("please try again\n")
+
         plot_2d(rga_scan_data, subscan)
+
         plt.show()
         continue
 
@@ -202,7 +222,7 @@ while True:
         plt.show()
 
     elif selection == "3":
-        print("todo")
+        halflife(rga_scan_data)
     elif selection == "4":
         break
     else:
