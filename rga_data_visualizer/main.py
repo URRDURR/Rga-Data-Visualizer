@@ -1,11 +1,14 @@
 import json
 from operator import itemgetter
 from tkinter import filedialog as fd
+import os
+import math
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import scipy.signal as sps
+from scipy.optimize import curve_fit
 
 import data_file_reader
 
@@ -76,9 +79,10 @@ def pressure_delta_calc(timings, rate, maximum):
     return differences
 
 
-def plot_3d(scan_data):
+def plot_3d(scan_data,title):
     fig = plt.figure()
     ax = fig.add_subplot(projection="3d")
+    ax.set_title(title)
 
     x = scan_data[:, :, MASS_AMU_INDEX]
     y = scan_data[:, :, INTENSITY_TORR_INDEX]
@@ -87,7 +91,7 @@ def plot_3d(scan_data):
     surf = ax.plot_surface(x, z, y, cmap="summer", rstride=1, cstride=1, alpha=None, linewidth=0, antialiased=False)
 
     ax.set_xlabel("x: Mass (AMU)")
-    ax.set_ylabel("z: Time (Seconds)")
+    ax.set_ylabel("z: Time (Milliseconds)")
     ax.set_zlabel("y: Pressure (Torr)")
 
 
@@ -119,13 +123,18 @@ def plot_2d(scan_data, scan_number, title):
     plt.scatter(x[peaks], y[peaks])
     # plt.yscale("log")
     plt.xlabel("Mass (Amu)")  # Add an x-label to the Axes.
-    plt.xticks(np.arange(start_mass - 1, stop_mass + 1, 5))
-    plt.xticks(np.arange(start_mass - 1, stop_mass + 1, 1), minor=True)
+    plt.xticks(np.arange(math.floor(start_mass / 5) * 5, math.ceil(stop_mass / 5) * 5, 5))
+    plt.xticks(np.arange(math.floor(start_mass / 5) * 5, math.ceil(stop_mass / 5) * 5, 1), minor=True)
     # plt.yticks(np.arange(0, max(t), 1), minor=True)
     # ax.set_xticks(np.arange(start_mass,stop_mass,6),minor=True)
     plt.ylabel("intensity (Torr)")  # Add a y-label to the Axes.
     plt.title(title)  # Add a title to the Axes.
     plt.grid()
+    plt.ylim(top=max(y[significant_peaks]) * 1.25)
+
+    print(max(y[significant_peaks]) * 1.15)
+    print(stop_mass)
+    print(math.ceil(stop_mass / 5) * 5)
 
     # plt.text((x[peaks_index])[7], (y[peaks_index])[7], (x[peaks_index])[7])
     # for i in len(molocule_json_output["molecules"]):
@@ -156,16 +165,62 @@ def plot_2d(scan_data, scan_number, title):
             rotation_mode="anchor",
             verticalalignment="center",
             horizontalalignment="left",
+            weight="bold",
         )
 
         # plt.savefig("graph", dpi=250, bbox_inches="tight")
 
 
-def halflife(scan_data):
-    value = scan_data[18, :, :]
+# TODO:
+# 1. make it work for total pressure as well
+# 2. add selection options
+# 3. test agains other samples
+def halflife(scan_data, time_stamps, total_pressures, title):
+
+    value = scan_data[10, :, :]
+    print(value[1:2, :])
+
+    def funct(x1, a, b):
+        return a * x1 + b
+
+    xdata = np.linspace(min(value[:, 2]), max(value[:, 2]), num=17000)
+
+    xdata2 = np.linspace(min(time_stamps), max(time_stamps), num=17000)
+
+    ydata, other = curve_fit(funct, np.squeeze(value[:, 2]), np.squeeze(value[:, 1]), maxfev=1000000)
+    test = sum(scan_data[:, :, :])
     print(np.shape(value))
     dfo = pd.DataFrame(value)
     print(dfo)
+
+    print(time_stamps)
+    print(total_pressures)
+    print(type(time_stamps))
+    print(type(total_pressures))
+
+    def func(x, a, b, c):
+        return a * np.exp(-b * x) + c
+
+    advancd_curve, other_2 = curve_fit(funct, np.array(time_stamps), np.array(total_pressures), maxfev=1000000)
+    print("adv. curve", advancd_curve)
+
+    print(test, "\n")
+    print(ydata, "\n")
+    print(other, "\n")
+
+    plt.scatter(np.squeeze(value[:, 2]), np.squeeze(value[:, 1]))
+    plt.plot(xdata, funct(xdata, *ydata))
+    plt.title("Scan 1 - Testing Fillament Pressure Increase - 2024_07_11 - H2 Decay")
+    plt.ylabel("intensity (Torr)")
+    plt.xlabel("Time (Miliseconds)")
+    plt.show()
+
+    plt.scatter(time_stamps, total_pressures)
+    plt.plot(xdata2, funct(xdata2, *advancd_curve))
+    plt.title("Scan 1 - Testing Fillament Pressure Increase - 2024_07_11 - Chamber Pressure Decay ")
+    plt.ylabel("intensity (Torr)")
+    plt.xlabel("Time (Miliseconds)")
+    plt.show()
 
     dfo.to_csv("file4.csv", index=False)
 
@@ -177,7 +232,7 @@ if PATH_VIA_TERMINAL:
     print("Enter folder location")
     file_path = fd.askopenfilename()
 else:
-    file_path = r"C:\Users\gma78\OneDrive - Simon Fraser University (1sfu)\KavanaghLab\02-Personal_Folders\Guneet Malhotra\HIM Room\Guneet\2024-07-11\RGA\Scan 3 - Increased Points - 2024_07_11\Analog-20240711-123603-709.rgadata"
+    file_path = r"C:\Users\Big Me\OneDrive - Simon Fraser University (1sfu)\KavanaghLab\02-Personal_Folders\Guneet Malhotra\HIM Room\Guneet\2024-06-27\RGA\Scan 3 - Slow Scan\Analog-20240627-141459-709.rgadata"
 
 time_stamps, spectra, total_pressures, json_file, number_of_cycles = data_file_reader.read_file_data(file_path)
 
@@ -194,18 +249,20 @@ points_per_amu, scan_rate, start_mass, stop_mass = itemgetter("pointsPerAmu", "s
     rga_json_data["cfgs"][0]
 )
 
+print(os.listdir())
+
 with open("molocule.json", encoding="utf-8") as file:
     compounds_dictionary = json.load(file)
 
 rga_scan_data = import_to_array(start_mass, stop_mass, points_per_amu, number_of_cycles)
 
 while True:
-    selection = input("\nwould you like a 2D plot [1], 3D plot [2], halflife data [3], or exit [4]?: ")
+    selection = input("\nwould you like a 2D plot [1], 3D plot [2], pressure decay [3], or exit [4]?: ")
     if selection == "1":
         while True:
             subscan = input("which sub-scan would you like to graph?: ")
             if subscan.isnumeric() and (int(subscan) > number_of_cycles):
-                print("number is larger than number of scans, please try again\n")
+                print("number is larger than number of scans (", number_of_cycles, "), please try again\n")
                 continue
             elif subscan.isnumeric() and (int(subscan) <= number_of_cycles):
                 subscan = int(subscan) - 1
@@ -219,11 +276,13 @@ while True:
         continue
 
     elif selection == "2":
-        plot_3d(rga_scan_data)
+        title = input("Title?: ")
+        plot_3d(rga_scan_data, title)
         plt.show()
 
     elif selection == "3":
-        halflife(rga_scan_data)
+        title = input("Title?: ")
+        halflife(rga_scan_data, time_stamps, total_pressures, title)
     elif selection == "4":
         break
     else:
